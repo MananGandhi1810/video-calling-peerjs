@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P2P Video Call</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0e27;
+      color: #fff;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .header {
+      padding: 16px;
+      background: rgba(0, 0, 0, 0.3);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      flex-shrink: 0;
+    }
+
+    .header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    @media (max-width: 640px) {
+      .header {
+        padding: 12px;
+      }
+
+      .header h1 {
+        font-size: 16px;
+      }
+    }
+
+    .status-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ef4444;
+      animation: pulse 2s infinite;
+    }
+
+    .status-indicator.connected {
+      background: #10b981;
+      animation: none;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .container {
+      flex: 1;
+      display: flex;
+      gap: 10px;
+      padding: 10px;
+      overflow: hidden;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        flex-direction: column;
+        gap: 8px;
+        padding: 8px;
+      }
+    }
+
+    .video-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    @media (max-width: 768px) {
+      .video-section {
+        gap: 8px;
+      }
+    }
+
+    .video-container {
+      position: relative;
+      flex: 1;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .video-container video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .video-label {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .no-video {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: #999;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.3);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #3b82f6;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    button:hover {
+      background: #2563eb;
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button.active {
+      background: #10b981;
+    }
+
+    button.danger {
+      background: #ef4444;
+    }
+
+    button.danger:hover {
+      background: #dc2626;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    @media (max-width: 640px) {
+      .controls {
+        padding: 12px;
+        gap: 8px;
+      }
+
+      button {
+        padding: 8px 14px;
+        font-size: 12px;
+        gap: 6px;
+      }
+
+      button span:last-child {
+        display: none;
+      }
+    }
+
+    .peers-container {
+      width: 300px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+    }
+
+    .peer-card {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .peer-id {
+      font-size: 11px;
+      color: #999;
+      word-break: break-all;
+      font-family: monospace;
+    }
+
+    .peer-status {
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: rgba(239, 68, 68, 0.2);
+      color: #fca5a5;
+    }
+
+    .peer-status.connected {
+      background: rgba(16, 185, 129, 0.2);
+      color: #86efac;
+    }
+
+    .info-box {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 768px) {
+      .peers-container {
+        width: 100%;
+        max-height: 200px;
+        flex-direction: row;
+        overflow-x: auto;
+        overflow-y: hidden;
+      }
+
+      .peer-card {
+        min-width: 200px;
+        flex-shrink: 0;
+      }
+
+      .info-box {
+        font-size: 11px;
+        padding: 10px;
+      }
+    }
+
+    input#remotePeerId {
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      color: white;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+
+    input#remotePeerId:focus {
+      outline: none;
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+
+    input#remotePeerId::placeholder {
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    @media (max-width: 640px) {
+      input#remotePeerId {
+        font-size: 12px;
+        padding: 8px;
+      }
+    }
+
+    @media (max-width: 1024px) {
+      .container {
+        flex-direction: column;
+      }
+
+      .peers-container {
+        width: 100%;
+        max-height: 150px;
+        flex-direction: row;
+        overflow-x: auto;
+      }
+
+      .peer-card {
+        min-width: 200px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>
+      <span class="status-indicator" id="statusIndicator"></span>
+      P2P Video Call
+    </h1>
+  </div>
+
+  <div class="container">
+    <div class="video-section">
+      <div class="video-container">
+        <span class="video-label">Local</span>
+        <video id="localVideo" autoplay muted playsinline></video>
+        <div class="no-video" id="localNoVideo" style="display: none;">
+          <span>Camera/Mic off</span>
+        </div>
+      </div>
+
+      <div class="video-container">
+        <span class="video-label">Remote</span>
+        <video id="remoteVideo" autoplay playsinline></video>
+        <div class="no-video" id="remoteNoVideo">
+          <span>Waiting for peer...</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="peers-container">
+      <div class="info-box">
+        <strong>Your ID:</strong>
+        <div style="margin-top: 6px; font-family: monospace; word-break: break-all;" id="myPeerId">Generating...</div>
+      </div>
+      <div class="info-box">
+        <strong>To call someone:</strong>
+        <div style="margin-top: 6px;">Enter their ID and click "Call"</div>
+      </div>
+      <input type="text" id="remotePeerId" placeholder="Enter peer ID to call">
+      <button id="callButton" style="width: 100%;">Call Peer</button>
+      <div id="peersList"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="toggleAudio">
+      <span id="audioIcon">🎤</span>
+      <span id="audioText">Mute Audio</span>
+    </button>
+    <button id="toggleVideo">
+      <span id="videoIcon">📷</span>
+      <span id="videoText">Stop Video</span>
+    </button>
+    <button id="toggleScreenShare">
+      <span id="screenIcon">🖥️</span>
+      <span id="screenText">Share Screen</span>
+    </button>
+    <button id="endCall" class="danger" disabled>End Call</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
