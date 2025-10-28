@@ -87,6 +87,9 @@
       flex-direction: column;
       gap: 10px;
       min-width: 0;
+      /* Keep content within viewport; no page scroll */
+      overflow: hidden;
+      min-height: 0; /* allow children to size down in flex */
     }
 
     @media (max-width: 768px) {
@@ -95,21 +98,57 @@
       }
     }
 
+    /* Layout each video container to share available vertical space
+       so the whole app fits inside the viewport (no scroll). The
+       inner .video-box enforces a 16:9 aspect ratio and scales to the
+       maximum size that fits its container without overflowing. */
     .video-container {
       position: relative;
-      flex: 1;
       background: #000;
       border-radius: 8px;
       overflow: hidden;
       display: flex;
       align-items: center;
       justify-content: center;
+      flex: 1 1 0; /* allow the two video containers to share space */
+      min-height: 0; /* important for flex children to not overflow */
     }
 
-    .video-container video {
+    /* Inner box that preserves 16:9 and scales to fit available area */
+    .video-box {
+      aspect-ratio: 16 / 9;
+      max-width: 100%;
+      max-height: 100%;
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+    }
+
+    .video-box video {
+      width: 100%;
+      height: 100%;
+      /* Show the whole video inside the 16:9 box. If the video's
+         aspect ratio differs, empty (letterbox) space will appear
+         instead of cropping — video will not be stretched. */
+      object-fit: contain;
+      object-position: center center;
+      display: block;
+      background: transparent;
+    }
+
+    /* Center the "no video" overlays inside the container */
+    .video-container .no-video {
+      position: absolute;
+      inset: 0;
+      display: none; /* toggled by JS */
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      color: #999;
+      background: transparent;
     }
 
     .video-label {
@@ -326,17 +365,21 @@
     <div class="video-section">
       <div class="video-container">
         <span class="video-label">Local</span>
-        <video id="localVideo" autoplay muted playsinline></video>
-        <div class="no-video" id="localNoVideo" style="display: none;">
-          <span>Camera/Mic off</span>
+        <div class="video-box">
+          <video id="localVideo" autoplay muted playsinline></video>
+          <div class="no-video" id="localNoVideo">
+            <span>Camera/Mic off</span>
+          </div>
         </div>
       </div>
 
       <div class="video-container">
         <span class="video-label">Remote</span>
-        <video id="remoteVideo" autoplay playsinline></video>
-        <div class="no-video" id="remoteNoVideo">
-          <span>Waiting for peer...</span>
+        <div class="video-box">
+          <video id="remoteVideo" autoplay playsinline></video>
+          <div class="no-video" id="remoteNoVideo">
+            <span>Waiting for peer...</span>
+          </div>
         </div>
       </div>
     </div>
